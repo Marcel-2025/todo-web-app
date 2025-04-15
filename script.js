@@ -11,75 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportButton = document.getElementById('export-tasks');
     const importInput = document.getElementById('import-tasks');
     const darkModeToggle = document.getElementById('toggle-dark-mode');
-    const languageSelect = document.getElementById('language-select');
-    const appTitle = document.getElementById('app-title');
 
     let tasks = JSON.parse(localStorage.getItem('todos')) || [];
-
-    // Language data
-    const languages = {
-        en: {
-            appTitle: "Enhanced ToDo App",
-            searchPlaceholder: "Search tasks...",
-            addTaskPlaceholder: "Add a new task",
-            categories: {
-                all: "All Categories",
-                work: "Work",
-                personal: "Personal",
-                shopping: "Shopping"
-            },
-            addButton: "Add",
-            exportButton: "Export Tasks",
-            progressCompleted: "% completed",
-            toggleDarkMode: "Toggle Dark Mode"
-        },
-        de: {
-            appTitle: "Erweiterte ToDo-App",
-            searchPlaceholder: "Aufgaben suchen...",
-            addTaskPlaceholder: "Neue Aufgabe hinzufügen",
-            categories: {
-                all: "Alle Kategorien",
-                work: "Arbeit",
-                personal: "Persönlich",
-                shopping: "Einkaufen"
-            },
-            addButton: "Hinzufügen",
-            exportButton: "Aufgaben exportieren",
-            progressCompleted: "% abgeschlossen",
-            toggleDarkMode: "Dunkelmodus umschalten"
-        }
-    };
-
-    // Get saved language or default to English
-    const savedLanguage = localStorage.getItem('language') || 'en';
-    languageSelect.value = savedLanguage;
-    applyLanguage(savedLanguage);
-
-    // Apply language changes
-    languageSelect.addEventListener('change', () => {
-        const selectedLanguage = languageSelect.value;
-        localStorage.setItem('language', selectedLanguage);
-        applyLanguage(selectedLanguage);
-    });
-
-    function applyLanguage(language) {
-        const lang = languages[language];
-
-        appTitle.textContent = lang.appTitle;
-        searchInput.placeholder = lang.searchPlaceholder;
-        todoInput.placeholder = lang.addTaskPlaceholder;
-        filterCategory.querySelectorAll('option')[0].textContent = lang.categories.all;
-        filterCategory.querySelectorAll('option')[1].textContent = lang.categories.work;
-        filterCategory.querySelectorAll('option')[2].textContent = lang.categories.personal;
-        filterCategory.querySelectorAll('option')[3].textContent = lang.categories.shopping;
-        categoryInput.querySelectorAll('option')[0].textContent = lang.categories.work;
-        categoryInput.querySelectorAll('option')[1].textContent = lang.categories.personal;
-        categoryInput.querySelectorAll('option')[2].textContent = lang.categories.shopping;
-        todoForm.querySelector('button').textContent = lang.addButton;
-        exportButton.textContent = lang.exportButton;
-        darkModeToggle.textContent = lang.toggleDarkMode;
-        updateProgress();
-    }
 
     const saveTasks = () => {
         localStorage.setItem('todos', JSON.stringify(tasks));
@@ -97,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredTasks.forEach(task => {
             const li = document.createElement('li');
             li.innerHTML = `
-                <span>${task.text} (${languages[savedLanguage].categories[task.category] || task.category}, Fällig: ${task.dueDate || 'Keine'})</span>
+                <span>${task.text} (${task.category}, Due: ${task.dueDate || 'None'})</span>
                 <button>Delete</button>
             `;
             li.querySelector('button').addEventListener('click', () => {
@@ -121,10 +54,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalTasks = tasks.length;
         const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
         progressBar.value = progress;
-        progressText.textContent = `${Math.round(progress)} ${languages[savedLanguage].progressCompleted}`;
+        progressText.textContent = `${Math.round(progress)}% completed`;
     };
 
-    // Other existing logic...
+    todoForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const newTask = {
+            text: todoInput.value,
+            category: categoryInput.value,
+            dueDate: dueDateInput.value,
+            completed: false
+        };
+        tasks.push(newTask);
+        saveTasks();
+        renderTasks();
+        todoInput.value = '';
+        dueDateInput.value = '';
+    });
+
+    searchInput.addEventListener('input', renderTasks);
+    filterCategory.addEventListener('change', renderTasks);
+
+    exportButton.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(tasks)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tasks.json';
+        a.click();
+    });
+
+    importInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                tasks = JSON.parse(reader.result);
+                saveTasks();
+                renderTasks();
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
 
     renderTasks();
 });
